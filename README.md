@@ -1,6 +1,34 @@
 # Lamb-rust
 
-Inspired by [lamb](https://github.com/tsoding/lamb)
+Inspired by [lamb](https://github.com/tsoding/lamb) from [TSoding](https://github.com/tsoding)
+
+## Examples
+
+```
+λ> :debug \f.(\x.f (x x)) (\x.f (x x))
+!> Debugging: λf.(λx.(f (x x)) λx.(f (x x)))
+   Press <Enter> to step eval or type 'quit' to quit.
+
+#> λf.(λx.(f (x x)) λx.(f (x x)))
+->
+#> λf.(f (λx.(f (x x)) λx.(f (x x))))
+->
+#> λf.(f (f (λx.(f (x x)) λx.(f (x x)))))
+->
+#> λf.(f (f (f (λx.(f (x x)) λx.(f (x x))))))
+->
+#> λf.(f (f (f (f (λx.(f (x x)) λx.(f (x x)))))))
+->
+#> λf.(f (f (f (f (f (λx.(f (x x)) λx.(f (x x))))))))
+->
+#> λf.(f (f (f (f (f (f (λx.(f (x x)) λx.(f (x x)))))))))
+->
+#> λf.(f (f (f (f (f (f (f (λx.(f (x x)) λx.(f (x x))))))))))
+->
+#> λf.(f (f (f (f (f (f (f (f (λx.(f (x x)) λx.(f (x x)))))))))))
+->
+#> λf.(f (f (f (f (f (f (f (f (f (λx.(f (x x)) λx.(f (x x))))))))))))
+```
 
 ## Quick Start
 
