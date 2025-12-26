@@ -150,7 +150,7 @@ impl<'a> Parser<'a> {
             name
         } else {
             return Err(format!(
-                "Error: Unexpected identifier while parsing a function: '{:?}'.",
+                "Error: Unexpected identifier while parsing: '{:?}'",
                 self.cur
             ));
         };
@@ -184,7 +184,7 @@ impl<'a> Parser<'a> {
                 Ok(Expr::var(name))
             }
             _ => Err(format!(
-                "Error: Unexpected token '{:?}'. Expected a primary expression instead.",
+                "Error: Unexpected token '{:?}'. Expected a primary expression instead",
                 self.cur
             )),
         }
@@ -399,8 +399,15 @@ impl State {
         }
     }
 
-    fn push_binding(&mut self, binding: Binding) {
+    fn add_binding(&mut self, binding: Binding) {
         self.bindings.insert(binding.name.clone(), binding);
+    }
+
+    fn delete_binding(&mut self, name: &String) -> Result<String, String> {
+        match self.bindings.remove(name) {
+            Some(binding) => Ok(binding.name),
+            None => Err(format!("binding '{}' was not found", name)),
+        }
     }
 
     fn display_bindigs(&self) -> String {
@@ -501,7 +508,23 @@ fn main() {
             match parser.parse_binding() {
                 Ok(binding) => {
                     println!("!> Created binding '{}'", binding.name);
-                    state.push_binding(binding);
+                    state.add_binding(binding);
+                }
+                Err(e) => println!("!> {}", e),
+            }
+            continue;
+        }
+
+        if let Some(input) = input.trim().strip_prefix(":delete") {
+            let mut parser = Parser::new(&input.trim_start());
+            match parser.expect_ident() {
+                Ok(name) => {
+                    match state.delete_binding(&name) {
+                        Ok(name) => println!("!> Removed binding '{}'", name),
+                        Err(e) => println!("!> Error: {}", e),
+                    }
+                    // println!("!> Created binding '{}'", binding.name);
+                    // state.add_binding(binding);
                 }
                 Err(e) => println!("!> {}", e),
             }
