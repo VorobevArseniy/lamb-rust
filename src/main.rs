@@ -254,7 +254,11 @@ impl Expr {
                 }
             }
             Expr::Fun { arg, body } => {
-                let evaluated_body = body.eval_one(bindings);
+                // preventing binding capture
+                let filtered_bindings: Vec<Binding> =
+                    bindings.iter().filter(|b| b.name != arg).cloned().collect();
+
+                let evaluated_body = body.eval_one(&filtered_bindings);
 
                 if evaluated_body != *body {
                     Expr::fun(arg, evaluated_body)
@@ -401,6 +405,7 @@ impl State {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Binding {
     pub name: String,
     pub body: Expr,
