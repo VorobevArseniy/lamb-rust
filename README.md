@@ -57,9 +57,9 @@ Bindings are lazy! Means they won't evaluate until they used in expression
 
 ## Commands
 
-- `:quit` To exit from REPL
-- `:ast <expr>` To render AST of the expression
-- `:debug <expr>` Step-by-step evaluation of the expression
-- `:let <name> = <expr>` Save expression in a associative name (binding)
-- `:list` List all existing bindings
-- `:delete <name>` Delete binding by it's name
+- `:quit` exit from REPL
+- `:ast <expr>` render AST of the expression
+- `:debug <expr>` step-by-step evaluation of the expression
+- `:let <name> = <expr>` save expression in a associative name (binding)
+- `:list` list all existing bindings
+- `:delete <name>` elete binding by it's name
