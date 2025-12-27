@@ -8,7 +8,6 @@ Inspired by [lamb](https://github.com/tsoding/lamb) from [TSoding](https://githu
 λ> :debug \f.(\x.f (x x)) (\x.f (x x))
 !> Debugging: λf.(λx.(f (x x)) λx.(f (x x)))
  > Press Enter to continue evaluation or type 'quit' to exit debugging
-
 #> λf.(λx.(f (x x)) λx.(f (x x)))
 ->
 #> λf.(f (λx.(f (x x)) λx.(f (x x))))
@@ -63,4 +62,4 @@ Bindings are lazy! Means they won't evaluate until they used in expression
 - `:debug <expr>` Step-by-step evaluation of the expression
 - `:let <name> = <expr>` Save expression in a associative name (binding)
 - `:list` List all existing bindings
-- `:delete <name>` Delete bining by it's name
+- `:delete <name>` Delete binding by it's name
