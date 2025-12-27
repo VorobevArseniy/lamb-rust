@@ -7,7 +7,7 @@ Inspired by [lamb](https://github.com/tsoding/lamb) from [TSoding](https://githu
 ```
 λ> :debug \f.(\x.f (x x)) (\x.f (x x))
 !> Debugging: λf.(λx.(f (x x)) λx.(f (x x)))
-   Press <Enter> to step eval or type 'quit' to quit.
+ > Press Enter to continue evaluation or type 'quit' to exit debugging
 
 #> λf.(λx.(f (x x)) λx.(f (x x)))
 ->

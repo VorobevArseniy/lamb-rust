@@ -469,6 +469,10 @@ fn main() {
             let mut parser = Parser::new(&input.trim_start());
             match parser.parse_expr() {
                 Ok(expr) => {
+                    println!(
+                        "!> Debugging {}\n > Press Enter to continue evaluation or type 'quit' to exit debugging",
+                        expr
+                    );
                     let mut current = expr.clone();
                     loop {
                         println!("#> {}", current);
