@@ -563,7 +563,9 @@ fn main() {
         if let Some(input) = input.trim().strip_prefix(":ast") {
             let mut parser = Parser::new(&input.trim_start());
             match parser.parse_expr() {
-                Ok(expr) => println!("{}", expr.display_ast()),
+                // removing last newline
+                // TODO find better solution
+                Ok(expr) => println!("{}", expr.display_ast().strip_suffix("\n").unwrap()),
                 Err(e) => println!("!> {}", e),
             }
             continue;
