@@ -459,15 +459,17 @@ impl CommandKind {
                 None => (cmd, ""),
             };
 
+            let args = args.trim();
+
             match cmd {
-                "quit" | "q" => (Self::Quit, args.trim()),
-                "debug" | "d" => (Self::Debug, args.trim()),
-                "ast" => (Self::AST, args.trim()),
-                "let" => (Self::Let, args.trim()),
-                "load" => (Self::Load, args.trim()),
-                "save" => (Self::Save, args.trim()),
-                "delete" => (Self::Delete, args.trim()),
-                "list" => (Self::List, args.trim()),
+                "quit" | "q" => (Self::Quit, args),
+                "debug" | "d" => (Self::Debug, args),
+                "ast" => (Self::AST, args),
+                "let" => (Self::Let, args),
+                "load" => (Self::Load, args),
+                "save" => (Self::Save, args),
+                "delete" => (Self::Delete, args),
+                "list" => (Self::List, args),
                 _ => (Self::Unknown, cmd),
             }
         } else {
@@ -554,7 +556,6 @@ impl State {
         }
     }
 
-    // TODO: change .map() to .values()
     fn display_bindigs(&self) -> String {
         self.bindings
             .values()
