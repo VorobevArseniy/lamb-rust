@@ -3,7 +3,7 @@ use std::{
     fmt::{Display, Write},
     fs,
     hash::Hash,
-    io::{self, BufRead, Write as IOWrite},
+    io::{self, BufRead, Stdin, Stdout, Write as IOWrite},
     str::Chars,
 };
 
@@ -434,14 +434,96 @@ impl Display for Binding {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum CommandKind {
+    Quit,
+    AST,
+    Debug,
+    Let,
+    List,
+    Delete,
+    Load,
+    Save,
+
+    Eval,
+    Unknown,
+}
+
+impl CommandKind {
+    fn match_input(input: &str) -> (Self, &str) {
+        let trimmed = input.trim();
+
+        if let Some(cmd) = input.strip_prefix(":") {
+            let (cmd, args) = match cmd.find(' ') {
+                Some(pos) => (&cmd[0..pos], &cmd[pos..]),
+                None => (cmd, ""),
+            };
+
+            match cmd {
+                "quit" | "q" => (Self::Quit, args.trim()),
+                "debug" | "d" => (Self::Debug, args.trim()),
+                "ast" => (Self::AST, args.trim()),
+                "let" => (Self::Let, args.trim()),
+                "load" => (Self::Load, args.trim()),
+                "save" => (Self::Save, args.trim()),
+                "delete" => (Self::Delete, args.trim()),
+                "list" => (Self::List, args.trim()),
+                _ => (Self::Unknown, cmd),
+            }
+        } else {
+            (Self::Eval, trimmed)
+        }
+    }
+}
+
+struct Command {
+    kind: CommandKind,
+    name: String,
+    alias: Option<String>,
+    short_desc: String,
+    long_desc: Option<String>,
+}
+
+impl Command {
+    fn new(
+        kind: CommandKind,
+        name: String,
+        alias: Option<String>,
+        short_desc: String,
+        long_desc: Option<String>,
+    ) -> Self {
+        Self {
+            kind,
+            name,
+            alias,
+            short_desc: short_desc.clone(),
+            long_desc: long_desc,
+        }
+    }
+}
+
 struct State {
     bindings: HashMap<String, Binding>,
+    commands: Vec<Command>,
+    stdin: Stdin,
+    stdout: Stdout,
 }
 
 impl State {
-    fn new() -> Self {
+    fn new(stdin: Stdin, stdout: Stdout) -> Self {
+        let commands = vec![Command::new(
+            CommandKind::Debug,
+            "debug".to_string(),
+            Some(":d".to_string()),
+            "step-by-step evaluation of the expression".to_string(),
+            None,
+        )];
+
         Self {
             bindings: HashMap::new(),
+            commands,
+            stdin,
+            stdout,
         }
     }
 
@@ -472,6 +554,7 @@ impl State {
         }
     }
 
+    // TODO: change .map() to .values()
     fn display_bindigs(&self) -> String {
         self.bindings
             .iter()
@@ -491,6 +574,87 @@ impl State {
             Err(e) => println!("!> Error saving bindings to '{}': {}", path, e),
         }
     }
+
+    fn debug_command_handler(&mut self, input: &str) {
+        let mut parser = Parser::new(&input.trim_start());
+        match parser.parse_expr() {
+            Ok(expr) => {
+                println!(
+                    "!> Debugging {}\n > Press Enter to continue evaluation or type 'quit' to exit debugging",
+                    expr
+                );
+                let mut current = expr.clone();
+                loop {
+                    println!("#> {}", current);
+                    let next = current.eval_one(&self.bindings);
+                    if next == current {
+                        break;
+                    }
+                    print!("-->");
+                    self.stdout.flush().unwrap();
+
+                    let mut input = String::new();
+                    self.stdin.lock().read_line(&mut input).unwrap();
+                    if input.trim() == "quit" || input.trim() == "q" {
+                        println!("!> Quit debugging!");
+                        break;
+                    }
+
+                    current = next;
+                }
+            }
+            Err(e) => println!("!> {}", e),
+        }
+    }
+
+    fn ast_command_handler(&self, input: &str) {
+        let mut parser = Parser::new(&input.trim());
+        match parser.parse_expr() {
+            // removing last newline
+            // TODO find better solution
+            Ok(expr) => println!("{}", expr.display_ast().strip_suffix("\n").unwrap()),
+            Err(e) => println!("!> {}", e),
+        }
+    }
+
+    fn let_command_handler(&mut self, input: &str) {
+        let mut parser = Parser::new(&input.trim());
+        match parser.parse_binding() {
+            Ok(binding) => self.add_binding(binding),
+            Err(e) => println!("!> {}", e),
+        }
+    }
+
+    fn load_command_handler(&mut self, input: &str) {
+        self.read_bindings_from_file(&input.trim());
+    }
+
+    fn save_command_handler(&mut self, input: &str) {
+        self.save_bindings_to_file(&input.trim());
+    }
+
+    fn delete_command_handler(&mut self, input: &str) {
+        let mut parser = Parser::new(&input.trim());
+        match parser.expect_ident() {
+            Ok(name) => match self.delete_binding(&name) {
+                Ok(name) => println!("!> Removed binding '{}'", name),
+                Err(e) => println!("!> Error: {}", e),
+            },
+            Err(e) => println!("!> {}", e),
+        }
+    }
+
+    fn list_command_handler(&self) {
+        println!("{}", self.display_bindigs());
+    }
+
+    fn eval_handler(&self, input: &str) {
+        let mut parser = Parser::new(&input);
+        match parser.parse_expr() {
+            Ok(expr) => println!("λ> {}", expr.eval(&self.bindings)),
+            Err(e) => println!("!> {}", e),
+        };
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -507,110 +671,39 @@ impl Binding {
 
 fn main() {
     let stdin = io::stdin();
-    let mut stdout = io::stdout();
+    let stdout = io::stdout();
 
-    let mut state = State::new();
+    let mut state = State::new(stdin, stdout);
 
     loop {
         print!("λ> ");
+        state.stdout.flush().unwrap();
 
-        stdout.flush().unwrap();
         let mut input = String::new();
-        stdin.lock().read_line(&mut input).unwrap();
+        state.stdin.read_line(&mut input).unwrap();
+        let trimmed = input.trim();
 
-        if input.trim_start_matches(" ") == "\n" {
+        if trimmed.is_empty() {
             continue;
         }
 
-        if input.trim() == ":quit" || input.trim() == ":q" {
-            println!("See ya!");
-            return ();
-        }
+        let (command, arg) = CommandKind::match_input(trimmed);
 
-        if let Some(input) = input.trim_start().strip_prefix(":debug") {
-            let mut parser = Parser::new(&input.trim_start());
-            match parser.parse_expr() {
-                Ok(expr) => {
-                    println!(
-                        "!> Debugging {}\n > Press Enter to continue evaluation or type 'quit' to exit debugging",
-                        expr
-                    );
-                    let mut current = expr.clone();
-                    loop {
-                        println!("#> {}", current);
-                        let next = current.eval_one(&state.bindings);
-                        if next == current {
-                            break;
-                        }
-                        print!("-->");
-                        stdout.flush().unwrap();
-
-                        let mut input = String::new();
-                        stdin.lock().read_line(&mut input).unwrap();
-                        if input.trim() == "quit" || input.trim() == "q" {
-                            println!("!> Quit debugging!");
-                            break;
-                        }
-
-                        current = next;
-                    }
-                    continue;
-                }
-                Err(e) => println!("!> {}", e),
+        match command {
+            CommandKind::Quit => {
+                println!("See ya!");
+                return ();
             }
-        }
+            CommandKind::Debug => state.debug_command_handler(arg),
+            CommandKind::List => state.list_command_handler(),
+            CommandKind::Delete => state.delete_command_handler(arg),
+            CommandKind::Save => state.save_command_handler(arg),
+            CommandKind::Load => state.load_command_handler(arg),
+            CommandKind::Let => state.let_command_handler(arg),
+            CommandKind::AST => state.ast_command_handler(arg),
 
-        if let Some(input) = input.trim().strip_prefix(":ast") {
-            let mut parser = Parser::new(&input.trim_start());
-            match parser.parse_expr() {
-                // removing last newline
-                // TODO find better solution
-                Ok(expr) => println!("{}", expr.display_ast().strip_suffix("\n").unwrap()),
-                Err(e) => println!("!> {}", e),
-            }
-            continue;
+            CommandKind::Unknown => todo!("make here :help command happen"),
+            CommandKind::Eval => state.eval_handler(trimmed),
         }
-
-        if let Some(input) = input.trim().strip_prefix(":let") {
-            let mut parser = Parser::new(&input.trim_start());
-            match parser.parse_binding() {
-                Ok(binding) => state.add_binding(binding),
-                Err(e) => println!("!> {}", e),
-            }
-            continue;
-        }
-
-        if let Some(input) = input.trim().strip_prefix(":load") {
-            state.read_bindings_from_file(&input.trim_start());
-            continue;
-        }
-
-        if let Some(input) = input.trim().strip_prefix(":save") {
-            state.save_bindings_to_file(&input.trim_start());
-            continue;
-        }
-
-        if let Some(input) = input.trim().strip_prefix(":delete") {
-            let mut parser = Parser::new(&input.trim_start());
-            match parser.expect_ident() {
-                Ok(name) => match state.delete_binding(&name) {
-                    Ok(name) => println!("!> Removed binding '{}'", name),
-                    Err(e) => println!("!> Error: {}", e),
-                },
-                Err(e) => println!("!> {}", e),
-            }
-            continue;
-        }
-
-        if let Some(..) = input.trim().strip_prefix(":list") {
-            println!("{}", state.display_bindigs());
-            continue;
-        }
-
-        let mut parser = Parser::new(&input);
-        match parser.parse_expr() {
-            Ok(expr) => println!("λ> {}", expr.eval(&state.bindings)),
-            Err(e) => println!("!> {}", e),
-        };
     }
 }
