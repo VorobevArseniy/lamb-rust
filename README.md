@@ -56,6 +56,7 @@ Bindings are lazy! Means they won't evaluate until they used in expression
 
 ## Commands
 
+- `:help` list of this commands
 - `:quit` exit from REPL
 - `:ast <expr>` render AST of the expression
 - `:debug <expr>` step-by-step evaluation of the expression
