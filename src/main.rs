@@ -480,26 +480,16 @@ impl CommandKind {
     }
 }
 
-struct Command {
-    kind: CommandKind,
+struct CommandDesc {
     name: String,
-    alias: Option<String>,
     sig: String,
     short_desc: String,
 }
 
-impl Command {
-    fn new(
-        kind: CommandKind,
-        name: impl Into<String>,
-        alias: Option<String>,
-        sig: impl Into<String>,
-        short_desc: impl Into<String>,
-    ) -> Self {
+impl CommandDesc {
+    fn new(name: impl Into<String>, sig: impl Into<String>, short_desc: impl Into<String>) -> Self {
         Self {
-            kind,
             name: name.into(),
-            alias,
             sig: sig.into(),
             short_desc: short_desc.into(),
         }
@@ -508,7 +498,7 @@ impl Command {
 
 struct State {
     bindings: HashMap<String, Binding>,
-    commands: Vec<Command>,
+    commands: Vec<CommandDesc>,
     stdin: Stdin,
     stdout: Stdout,
 }
@@ -516,17 +506,13 @@ struct State {
 impl State {
     fn new(stdin: Stdin, stdout: Stdout) -> Self {
         let commands = vec![
-            Command::new(
-                CommandKind::Debug,
+            CommandDesc::new(
                 "debug",
-                Some(":d".to_string()),
                 "<expr>",
                 "step-by-step evaluation of the expression",
             ),
-            Command::new(
-                CommandKind::Let,
+            CommandDesc::new(
                 "let",
-                None,
                 "[name] = <expr>",
                 "save expression in a associative name (binding)",
             ),
