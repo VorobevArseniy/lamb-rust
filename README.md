@@ -54,6 +54,8 @@ Use `:let` command to create binding:
 
 Bindings are lazy! Means they won't evaluate until they used in expression
 
+TODO: shadowing binding's name causes recursive binding
+
 ## Commands
 
 - `:help` list of this commands
